@@ -1,0 +1,309 @@
+---
+title: "Crop Genebank Collection Size and Evaluation Time Analysis"
+author: "Michael Kantar"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.width = 12, fig.height = 6)
+```
+
+## Overview
+
+This document visualizes crop genebank collection sizes, potential pairwise crosses, and the time required to evaluate populations for major crop species. The analysis includes 10 major crops with data from global genebank collections.
+
+## Load Required Libraries
+
+```{r load-libraries}
+library(ggplot2)
+library(tidyverse)
+library(emo)
+library(viridis)
+library(hrbrthemes)
+library(ggpubr)
+library(emojifont)
+library(showtext)
+library(emoGG)
+```
+
+## Create Sample Dataset with Emojis
+
+This section creates a sample dataset with emoji representations for each crop.
+
+```{r create-sample-data}
+# Create the dataset with crop info and emojis
+data_sample <- data.frame(
+  Crop = c("Sugarbeet", "Soybean", "Cassava", "Rice", "Sugarcane", 
+           "Tomato", "Potato", "Wheat", "Maize", "Oil Palm"),
+  genebank =  c("GB", "GB", "GB", "GB", "GB", 
+                "GB", "GB", "GB", "GB", "GB"),
+  CollectionSize = c(2694, 73898, 13974, 259892, 1665, 
+                     57164, 20298, 431075, 139466, 638),
+  YearsToExplore = c(725.5, 546084.1, 19525.9, 6754359.2, 277.1, 
+                     326766.6, 41198.9, 18582522.5, 1945062.6, 40.6),
+  Emoji = c("🥬", "🌱", "🌿", "🌾", "🍬", 
+            "🍅", "🥔", "🌾", "🌽", "🌴")
+)
+
+# Combine emoji with crop name for labeling
+data_sample$CropLabel <- paste(data_sample$Emoji, data_sample$Crop)
+
+# Display the dataset
+knitr::kable(data_sample[, c("Crop", "CollectionSize", "YearsToExplore")], 
+             col.names = c("Crop", "Collection Size", "Years to Explore"),
+             caption = "Summary of Crop Genebank Collections")
+```
+
+## Preliminary Stacked Bar Chart
+
+This visualization shows both collection size and years to explore in a single stacked bar chart.
+
+```{r stacked-bar-chart, fig.height=8}
+# Convert to long format for stacked bar chart
+data_long <- data_sample %>%
+  pivot_longer(cols = c(CollectionSize, YearsToExplore),
+               names_to = "Metric", values_to = "Value")
+
+# Load emojis and their fonts (if necessary)
+showtext_auto()
+
+# Plot the stacked bar chart
+ggplot(data_long, aes(x = reorder(CropLabel, Value), y = Value, fill = Metric)) +
+  geom_bar(stat = "identity", position = "stack") +
+  coord_flip() +
+  labs(
+    title = "Crop Collection Size and Exploration Time",
+    x = "Crop",
+    y = "Value",
+    fill = "Metric"
+  ) +
+  scale_y_continuous(labels = scales::comma) +
+  scale_fill_manual(values = c("CollectionSize" = "#1f77b4", "YearsToExplore" = "#ff7f0e")) +
+  theme_minimal(base_size = 14)
+```
+
+## Load Main Dataset
+
+```{r load-data}
+data <- read.csv("Figure_for_science_V2.csv")
+head(data)
+```
+
+## Panel A: Global Crop Collection Size
+
+This panel shows the total number of accessions for each crop in global genebank collections.
+
+```{r panel-A}
+A <- ggplot(data, aes(x = reorder(genebank, Collection.Size), 
+                      y = Collection.Size, fill = Crop, label = Crop)) +
+  geom_bar(position="stack", stat = "identity") +
+  labs(
+    title = "Global Crop Collection Size",
+    x = "Crop",
+    y = "Number of Accessions"
+  ) +
+  scale_fill_viridis(discrete = TRUE) +
+  theme_ipsum() +
+  scale_y_continuous(labels = scales::comma) +
+  theme_minimal(base_size = 28) +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) +
+  theme(strip.text = element_text(size = 28, face = "bold"),
+        plot.title = element_text(size = 32, face = "bold"),
+        axis.title.y = element_text(size = 28),
+        axis.text.y = element_text(size = 24),
+        legend.title = element_text(size = 26),
+        legend.text = element_text(size = 24))
+
+A
+```
+
+## Panel B: Potential Crosses
+
+This panel illustrates the number of potential pairwise crosses that could be made with each crop's germplasm collection.
+
+```{r panel-B}
+B <- ggplot(data, aes(x = reorder(genebank, Number.of.potential.pairwise.crosses), 
+                      y = Number.of.potential.pairwise.crosses, 
+                      fill = Crop, label = Crop)) +
+  geom_bar(position="stack", stat = "identity") +
+  labs(
+    title = "Potential Crosses",
+    x = "Crop",
+    y = "Number of Populations"
+  ) +
+  scale_fill_viridis(discrete = TRUE) +
+  theme_ipsum() +
+  scale_y_continuous(labels = scales::comma) +
+  theme_minimal(base_size = 28) +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) +
+  theme(strip.text = element_text(size = 28, face = "bold"),
+        plot.title = element_text(size = 32, face = "bold"),
+        axis.title.y = element_text(size = 28),
+        axis.text.y = element_text(size = 24),
+        legend.title = element_text(size = 26),
+        legend.text = element_text(size = 24))
+
+B
+```
+
+## Panel C: Time to Evaluate Populations
+
+This panel shows the estimated time (in years) required to evaluate all potential populations, assuming 5,000 populations can be evaluated per year.
+
+```{r panel-C}
+C <- ggplot(data, aes(x = reorder(genebank, Time_Years), 
+                      y = Time_Years, fill = Crop)) +
+  geom_bar(position="stack", stat = "identity") +
+  labs(
+    title = "Time to Evaluate Populations",
+    x = "Crop",
+    y = "Number of Years"
+  ) +
+  scale_fill_viridis(discrete = TRUE) +
+  theme_ipsum() +
+  scale_y_continuous(labels = scales::comma) +
+  theme_minimal(base_size = 28) +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) +
+  theme(strip.text = element_text(size = 28, face = "bold"),
+        plot.title = element_text(size = 32, face = "bold"),
+        axis.title.y = element_text(size = 28),
+        axis.text.y = element_text(size = 24),
+        legend.title = element_text(size = 26),
+        legend.text = element_text(size = 24))
+
+C
+```
+
+## Combined Figure
+
+This is the final three-panel figure combining all analyses with a shared legend.
+
+```{r combined-figure, fig.width=18, fig.height=6}
+ggarrange(A, B, C, nrow = 1, ncol = 3, common.legend = TRUE)
+```
+
+## Export High-Resolution Figure
+
+Export the combined figure as a high-resolution PNG file suitable for publication.
+
+```{r export-figure}
+# Recreate panels with consistent sizing for export
+A_export <- ggplot(data, aes(x = reorder(genebank, Collection.Size), 
+                      y = Collection.Size, fill = Crop, label = Crop)) +
+  geom_bar(position="stack", stat = "identity") +
+  labs(
+    title = "Global Crop Collection Size",
+    x = "Crop",
+    y = "Number of Accessions"
+  ) +
+  scale_fill_viridis(discrete = TRUE) +
+  scale_y_continuous(labels = scales::comma) +
+  theme_minimal(base_size = 36) +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.title = element_text(size = 42, face = "bold", hjust = 0.5),
+        axis.title.y = element_text(size = 36, face = "bold"),
+        axis.text.y = element_text(size = 32),
+        legend.title = element_text(size = 34, face = "bold"),
+        legend.text = element_text(size = 32),
+        legend.key.size = unit(1.5, "cm"),
+        plot.margin = margin(20, 20, 20, 20))
+
+B_export <- ggplot(data, aes(x = reorder(genebank, Number.of.potential.pairwise.crosses), 
+                      y = Number.of.potential.pairwise.crosses, 
+                      fill = Crop, label = Crop)) +
+  geom_bar(position="stack", stat = "identity") +
+  labs(
+    title = "Potential Crosses",
+    x = "Crop",
+    y = "Number of Populations"
+  ) +
+  scale_fill_viridis(discrete = TRUE) +
+  scale_y_continuous(labels = scales::comma) +
+  theme_minimal(base_size = 36) +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.title = element_text(size = 42, face = "bold", hjust = 0.5),
+        axis.title.y = element_text(size = 36, face = "bold"),
+        axis.text.y = element_text(size = 32),
+        legend.title = element_text(size = 34, face = "bold"),
+        legend.text = element_text(size = 32),
+        legend.key.size = unit(1.5, "cm"),
+        plot.margin = margin(20, 20, 20, 20))
+
+C_export <- ggplot(data, aes(x = reorder(genebank, Time_Years), 
+                      y = Time_Years, fill = Crop)) +
+  geom_bar(position="stack", stat = "identity") +
+  labs(
+    title = "Time to Evaluate Populations",
+    x = "Crop",
+    y = "Number of Years"
+  ) +
+  scale_fill_viridis(discrete = TRUE) +
+  scale_y_continuous(labels = scales::comma) +
+  theme_minimal(base_size = 36) +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.title = element_text(size = 42, face = "bold", hjust = 0.5),
+        axis.title.y = element_text(size = 36, face = "bold"),
+        axis.text.y = element_text(size = 32),
+        legend.title = element_text(size = 34, face = "bold"),
+        legend.text = element_text(size = 32),
+        legend.key.size = unit(1.5, "cm"),
+        plot.margin = margin(20, 20, 20, 20))
+
+# Create the combined figure with equal panel widths and panel labels
+combined_figure <- ggarrange(A_export, B_export, C_export, 
+                            nrow = 1, ncol = 3, 
+                            common.legend = TRUE,
+                            legend = "bottom",
+                            widths = c(1, 1, 1),
+                            labels = c("A", "B", "C"),
+                            font.label = list(size = 48, face = "bold"))
+
+# Export as high-resolution PNG with larger dimensions
+ggsave(
+  filename = "Crop_Genebank_Analysis_Figure.png",
+  plot = combined_figure,
+  width = 24,
+  height = 10,
+  units = "in",
+  dpi = 600,
+  bg = "white"
+)
+
+cat("Figure saved as: Crop_Genebank_Analysis_Figure.png\n")
+cat("Resolution: 24 inches × 10 inches at 600 DPI\n")
+cat("Font sizes: Base 36pt, Titles 42pt, Axis labels 36pt, Panel labels 48pt\n")
+```
+
+## Summary
+
+The combined figure demonstrates:
+
+1. **Panel A**: The wide variation in genebank collection sizes across major crops, with wheat having the largest collection (431,075 accessions) and oil palm the smallest (638 accessions).
+
+2. **Panel B**: The exponential increase in potential pairwise crosses as collection size grows, with rice showing the highest number of potential crosses due to its large collection size.
+
+3. **Panel C**: The astronomical time requirements for comprehensive evaluation of all potential populations, with wheat requiring over 18.5 million years to evaluate all potential crosses at a rate of 5,000 populations per year, highlighting the need for strategic approaches to germplasm utilization.
+
+## Session Information
+
+```{r session-info}
+sessionInfo()
+```
